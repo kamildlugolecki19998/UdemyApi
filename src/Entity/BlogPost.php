@@ -4,6 +4,7 @@ namespace App\Entity;
 
 use App\Repository\BlogPostRepository;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\HttpFoundation\Request;
 
 #[ORM\Entity(repositoryClass: BlogPostRepository::class)]
 class BlogPost
@@ -22,9 +23,12 @@ class BlogPost
     #[ORM\Column(type: 'datetime')]
     private $published;
 
-    /**
-     * @return int|null
-     */
+    #[ORM\Column(type: 'string', length: 255, nullable: true)]
+    private $slug;
+
+    #[ORM\Column(type: 'string', length: 255, options: ['default' => 'Anonim'])]
+    private $author;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -35,7 +39,7 @@ class BlogPost
         return $this->title;
     }
 
-    public function setTitle(string $title): self
+    public function setTitle(string $title): BlogPost
     {
         $this->title = $title;
 
@@ -47,7 +51,7 @@ class BlogPost
         return $this->content;
     }
 
-    public function setContent(string $content): self
+    public function setContent(string $content): BlogPost
     {
         $this->content = $content;
 
@@ -59,10 +63,47 @@ class BlogPost
         return $this->published;
     }
 
-    public function setPublished(\DateTimeInterface $published): self
+    public function setPublished(\DateTimeInterface $published): BlogPost
     {
         $this->published = $published;
 
         return $this;
     }
+    /**
+     * @return string|null
+     */
+    public function getSlug(): ?string
+    {
+        return $this->slug;
+    }
+
+    /**
+     * @param string|null $slug
+     * @return BlogPost
+     */
+    public function setSlug(?string $slug): BlogPost
+    {
+        $this->slug = $slug;
+        return $this;
+    }
+
+    /**
+     * @return string
+     */
+    public function getAuthor(): ?string
+    {
+        return $this->author;
+    }
+
+    /**
+     * @param string $author
+     * @return BlogPost
+     */
+    public function setAuthor(string $author): BlogPost
+    {
+        $this->author = $author;
+        return $this;
+    }
+
+
 }
