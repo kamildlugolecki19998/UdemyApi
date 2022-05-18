@@ -2,11 +2,14 @@
 
 namespace App\Entity;
 
+use ApiPlatform\Core\Annotation\ApiResource;
 use App\Repository\BlogPostRepository;
+use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\HttpFoundation\Request;
 
 #[ORM\Entity(repositoryClass: BlogPostRepository::class)]
+#[ApiResource]
 class BlogPost
 {
     #[ORM\Id]
@@ -26,8 +29,35 @@ class BlogPost
     #[ORM\Column(type: 'string', length: 255, nullable: true)]
     private $slug;
 
-    #[ORM\Column(type: 'string', length: 255, options: ['default' => 'Anonim'])]
+    #[ORM\ManyToOne(targetEntity: User::class, inversedBy: 'posts')]
+    #[ORM\JoinColumn(nullable: false)]
     private $author;
+
+    #[ORM\OneToMany(targetEntity: Comment::class, mappedBy: 'blogPost')]
+    private $comments;
+
+    public function __construct()
+    {
+        $this->comments = new ArrayCollection();
+    }
+
+    /**
+     * @return ArrayCollection
+     */
+    public function getComments(): ArrayCollection
+    {
+        return $this->comments;
+    }
+
+    /**
+     * @param ArrayCollection $comments
+     * @return BlogPost
+     */
+    public function setComments(ArrayCollection $comments): BlogPost
+    {
+        $this->comments = $comments;
+        return $this;
+    }
 
     public function getId(): ?int
     {
@@ -69,6 +99,7 @@ class BlogPost
 
         return $this;
     }
+
     /**
      * @return string|null
      */
@@ -88,22 +119,21 @@ class BlogPost
     }
 
     /**
-     * @return string
+     * @return User
      */
-    public function getAuthor(): ?string
+    public function getAuthor(): User
     {
         return $this->author;
     }
 
     /**
-     * @param string $author
+     * @param User $author
      * @return BlogPost
      */
-    public function setAuthor(string $author): BlogPost
+    public function setAuthor(User $author): BlogPost
     {
         $this->author = $author;
         return $this;
     }
-
 
 }
