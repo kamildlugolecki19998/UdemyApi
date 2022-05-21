@@ -6,6 +6,7 @@ use ApiPlatform\Core\Annotation\ApiResource;
 use App\Repository\BlogPostRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\Mapping as ORM;
+use Doctrine\Common\Collections\Collection;
 use Symfony\Component\HttpFoundation\Request;
 
 #[ORM\Entity(repositoryClass: BlogPostRepository::class)]
@@ -42,9 +43,9 @@ class BlogPost
     }
 
     /**
-     * @return ArrayCollection
+     * @return Collection
      */
-    public function getComments(): ArrayCollection
+    public function getComments(): Collection
     {
         return $this->comments;
     }
