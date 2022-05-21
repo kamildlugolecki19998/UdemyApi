@@ -22,7 +22,8 @@ class UserController extends AbstractController
     )]
     public function registerUser(
         UserPasswordHasherInterface $passwordHasher,
-        Request                     $request, SerializerInterface $serializer,
+        Request                     $request,
+        SerializerInterface         $serializer,
         ManagerRegistry             $doctrine,
         ValidatorInterface          $validator
     ): Response

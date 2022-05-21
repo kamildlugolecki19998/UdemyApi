@@ -216,12 +216,12 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return 'ff';
     }
 
-    public function getRetypedPassword()
+    public function getRetypedPassword(): string
     {
         return $this->retypedPassword;
     }
 
-    public function setRetypedPassword($retypedPassword)
+    public function setRetypedPassword(string $retypedPassword): User
     {
         $this->retypedPassword = $retypedPassword;
         return $this;
