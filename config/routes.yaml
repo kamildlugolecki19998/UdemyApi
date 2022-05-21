@@ -17,3 +17,6 @@ doctrine.orm.default_metadata_driver:
 #        _controller: App\Controller\UserController::registerUser
 #        _api_resource_class: App\Entity\User
 #        _api_collection_operation_name: register_user
+# config/routes.yaml
+api_login_check:
+    path: /api/login_check
