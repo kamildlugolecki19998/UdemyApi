@@ -5,32 +5,52 @@ namespace App\Entity;
 use ApiPlatform\Core\Annotation\ApiResource;
 use App\Repository\CommentRepository;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Security\Core\User\UserInterface;
+use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: CommentRepository::class)]
 #[ApiResource(
-    itemOperations: ['get'],
-    collectionOperations: ['get']
+    collectionOperations: [
+        'get' => ['normalization_context' => ['groups' => ['get_all_comments']]],
+        'post' => ["security" => "is_granted('IS_AUTHENTICATED_FULLY')"],
+    ],
+    itemOperations: [
+        'get' => ['normalization_context' => ['groups' => ['get_specific_comment']]],
+        'put' => ["security" => "is_granted('IS_AUTHENTICATED_FULLY') and object.getAuthor() == user"],
+        'delete' => ["security" => "is_granted('IS_AUTHENTICATED_FULLY') and object.getAuthor() == user"],
+    ],
+    subresourceOperations: [
+        'api_blog_posts_comments_get_subresource' => [
+            'normalization_context' => ['groups' => ['get_comments_with_author']]
+        ]
+    ],
+    normalizationContext: ['groups' => ['get']]
 )]
-class Comment
+class Comment implements AuthoredEntityInterface, PublishedDateEntityInterface
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column(type: 'integer')]
-    private $id;
+    #[Groups(["get_comments_with_author", "get_user"])]
+    private ?int $id;
 
     #[ORM\Column(type: 'text')]
-    private $content;
+    #[Groups(["post", "get_comments_with_author", "get_specific_comment", "get_all_comments", "get_user"])]
+    private ?string $content;
 
     #[ORM\Column(type: 'datetime')]
-    private $published;
+    #[Groups(["get_specific_comment", "get_all_comments"])]
+    private ?\DateTimeInterface $published;
 
     #[ORM\ManyToOne(targetEntity: User::class, inversedBy: 'comments')]
     #[ORM\JoinColumn(nullable: false)]
-    private $author;
+    #[Groups(["get_comments_with_author", "get_specific_comment", "get_all_comments"])]
+    private UserInterface $author;
 
     #[ORM\ManyToOne(targetEntity: BlogPost::class, inversedBy: 'comments')]
     #[ORM\JoinColumn(nullable: false)]
-    private $blogPost;
+    #[Groups(["post", "get_specific_comment", "get_all_comments"])]
+    private BlogPost $blogPost;
 
     public function getId(): ?int
     {
@@ -54,7 +74,7 @@ class Comment
         return $this->published;
     }
 
-    public function setPublished(\DateTimeInterface $published): self
+    public function setPublished(\DateTimeInterface $published): Comment
     {
         $this->published = $published;
 
@@ -62,19 +82,18 @@ class Comment
     }
 
     /**
-     * @return User
+     * @return UserInterface
      */
-    public function getAuthor(): User
+    public function getAuthor(): UserInterface
     {
         return $this->author;
     }
 
     /**
-     * @param User $author
+     * @param UserInterface $author
      * @return Comment
      */
-
-    public function setAuthor(User $author): Comment
+    public function setAuthor(UserInterface $author): Comment
     {
         $this->author = $author;
         return $this;

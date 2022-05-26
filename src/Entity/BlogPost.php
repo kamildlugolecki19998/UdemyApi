@@ -3,57 +3,89 @@
 namespace App\Entity;
 
 use ApiPlatform\Core\Annotation\ApiResource;
+use ApiPlatform\Core\Annotation\ApiSubresource;
 use App\Repository\BlogPostRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\Mapping as ORM;
 use Doctrine\Common\Collections\Collection;
-use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\Security\Core\User\UserInterface;
+use Symfony\Component\Serializer\Annotation\Groups;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: BlogPostRepository::class)]
-#[ApiResource]
-class BlogPost
+#[ApiResource(
+    collectionOperations: [
+        'get' => ["security" => "is_granted('IS_AUTHENTICATED_FULLY')"],
+        'post' => ["security" => "is_granted('IS_AUTHENTICATED_FULLY')"],
+    ],
+    itemOperations: [
+        'get' => [
+            "security" => "is_granted('IS_AUTHENTICATED_FULLY')",
+            'normalization_context' => ['groups' => ['get_user_of_blog_post']]
+        ],
+        'put' => ["security" => "is_granted('IS_AUTHENTICATED_FULLY') and object.getAuthor() == user"]
+    ],
+    denormalizationContext: ['groups' => ['post']],
+)]
+class BlogPost implements AuthoredEntityInterface, PublishedDateEntityInterface
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column(type: 'integer')]
-    private $id;
+    #[Groups(["get_user_of_blog_post"])]
+    private ?int $id;
 
     #[ORM\Column(type: 'string', length: 255)]
-    private $title;
+    #[Assert\NotBlank]
+    #[Assert\Length(
+        min: 5,
+        max: 255,
+        minMessage: "Title must has at least 5 characters",
+        maxMessage: "Title must have the most 255 characters"
+    )]
+    #[Groups(["post", "get_user_of_blog_post"])]
+    private ?string $title;
 
     #[ORM\Column(type: 'text')]
-    private $content;
+    #[Assert\NotBlank]
+    #[Assert\Length(
+        min: 5,
+        max: 255,
+        minMessage: "Content must has at least 5 characters",
+        maxMessage: "Content must have the most 255 characters"
+    )]
+    #[Groups(["post", "get_user_of_blog_post"])]
+    private ?string $content;
 
     #[ORM\Column(type: 'datetime')]
-    private $published;
+    #[Groups(["post", "get_user_of_blog_post"])]
+    private ?\DateTimeInterface $published;
 
     #[ORM\Column(type: 'string', length: 255, nullable: true)]
-    private $slug;
+    #[Assert\NotBlank]
+    #[Groups(["post", "get_user_of_blog_post"])]
+    private ?string $slug;
 
     #[ORM\ManyToOne(targetEntity: User::class, inversedBy: 'posts')]
     #[ORM\JoinColumn(nullable: false)]
-    private $author;
+    #[Groups(["get_user_of_blog_post"])]
+    private User $author;
 
     #[ORM\OneToMany(targetEntity: Comment::class, mappedBy: 'blogPost')]
-    private $comments;
+    #[Groups(["get_user_of_blog_post"])]
+    #[ApiSubresource()]
+    private Collection $comments;
 
     public function __construct()
     {
         $this->comments = new ArrayCollection();
     }
 
-    /**
-     * @return Collection
-     */
     public function getComments(): Collection
     {
         return $this->comments;
     }
 
-    /**
-     * @param ArrayCollection $comments
-     * @return BlogPost
-     */
     public function setComments(ArrayCollection $comments): BlogPost
     {
         $this->comments = $comments;
@@ -94,6 +126,11 @@ class BlogPost
         return $this->published;
     }
 
+    public function getSlug(): ?string
+    {
+        return $this->slug;
+    }
+
     public function setPublished(\DateTimeInterface $published): BlogPost
     {
         $this->published = $published;
@@ -101,40 +138,21 @@ class BlogPost
         return $this;
     }
 
-    /**
-     * @return string|null
-     */
-    public function getSlug(): ?string
-    {
-        return $this->slug;
-    }
-
-    /**
-     * @param string|null $slug
-     * @return BlogPost
-     */
     public function setSlug(?string $slug): BlogPost
     {
         $this->slug = $slug;
         return $this;
     }
 
-    /**
-     * @return User
-     */
     public function getAuthor(): User
     {
         return $this->author;
     }
 
-    /**
-     * @param User $author
-     * @return BlogPost
-     */
-    public function setAuthor(User $author): BlogPost
+    public function setAuthor(UserInterface $author): BlogPost
     {
         $this->author = $author;
+
         return $this;
     }
-
 }

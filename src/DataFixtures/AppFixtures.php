@@ -12,11 +12,33 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 class AppFixtures extends Fixture
 {
-    /** @var UserPasswordHasherInterface */
     private UserPasswordHasherInterface $passwordHasher;
 
-
     protected \Faker\Generator $faker;
+
+    private const USERS = [
+        [
+            'username' => 'admin',
+            'email' => 'admin@blog.com',
+            'name' => 'Kamil Długołęcki',
+            'password'=> 'Haslo1234',
+            'fullName' => 'Kamil Dluglecki Admin'
+        ],
+        [
+            'username' => 'Josh',
+            'email' => 'Josh@blog.com',
+            'name' => 'Josh Newt',
+            'password'=> 'Haslo1234',
+            'fullName' => 'Josh Newt '
+        ],
+        [
+            'username' => 'john',
+            'email' => 'john@blog.com',
+            'name' => 'John Doe',
+            'password'=> 'Haslo1234',
+            'fullName' => 'John Doe'
+        ],
+    ];
 
     public function __construct(UserPasswordHasherInterface $passwordHasher)
     {
@@ -30,23 +52,16 @@ class AppFixtures extends Fixture
         $this->loadUsers($manager);
         $this->loadBlogPosts($manager);
         $this->loadComments($manager);
-        // $product = new Product();
-        // $manager->persist($product);
-
-
     }
 
-    public function loadBlogPosts(ObjectManager $manager)
+    private function loadBlogPosts(ObjectManager $manager)
     {
-        /** @var User $user */
-        $user = $this->getReference('user_admin');
-
         for ($i = 0; $i < 100; $i++) {
             $blogPost = new BlogPost();
             $blogPost->setTitle($this->faker->realText(50));
             $blogPost->setPublished(new \DateTime());
             $blogPost->setContent($this->faker->realText(100));
-            $blogPost->setAuthor($user);
+            $blogPost->setAuthor($this->getReference($this->getUserRandomUserReference()));
             $blogPost->setSlug($this->faker->slug);
 
             $this->setReference("blog_post_$i", $blogPost);
@@ -57,17 +72,15 @@ class AppFixtures extends Fixture
         $manager->flush();
     }
 
-    public function loadComments(ObjectManager $manager)
+    private function loadComments(ObjectManager $manager)
     {
-        /** @var User $user */
-        $user = $this->getReference('user_admin');
-
         for ($i = 0; $i < 100; $i++) {
             for ($j = 0; $j < rand(1, 10); $j++) {
                 $comment = new Comment();
                 $comment->setContent($this->faker->realText(30));
                 $comment->setPublished(new \DateTime());
-                $comment->setAuthor($user);
+
+                $comment->setAuthor($this->getReference($this->getUserRandomUserReference()));
                 $comment->setBlogPost($this->getReference("blog_post_$i"));
 
                 $manager->persist($comment);
@@ -77,24 +90,31 @@ class AppFixtures extends Fixture
         $manager->flush();
     }
 
-    public function loadUsers(ObjectManager $manager)
+    private function loadUsers(ObjectManager $manager)
     {
-        $user = new User();
+        foreach (self::USERS as $userFixture){
+            $user = new User();
 
-        $user->setUsername('Admin');
-        $user->setEmail('admin@blog.com');
-        $user->setName('Kamil Długołęcki');
-        $user->setFullname('Kamil Dlugolecki');
-        $hashedPassword = $this->passwordHasher->hashPassword(
-            $user,
-            'secret123#'
-        );
-        $user->setPassword($hashedPassword);
+            $user->setUsername($userFixture['username']);
+            $user->setEmail($userFixture['email']);
+            $user->setName($userFixture['name']);
+            $user->setFullname($userFixture['fullName']);
+            $hashedPassword = $this->passwordHasher->hashPassword(
+                $user,
+                $userFixture['password']
+            );
+            $user->setPassword($hashedPassword);
 
-        $this->addReference('user_admin', $user);
+            $this->addReference('user_' . $userFixture['username'], $user);
 
-        $manager->persist($user);
+            $manager->persist($user);
+        }
+
         $manager->flush();
+    }
 
+    private function getUserRandomUserReference(): string
+    {
+        return 'user_' . self::USERS[rand(0, 2)]['username'];
     }
 }

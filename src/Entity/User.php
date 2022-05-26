@@ -9,17 +9,32 @@ use App\Repository\UserRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\Mapping as ORM;
 use Doctrine\Common\Collections\Collection;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
-use Symfony\Component\PasswordHasher\PasswordHasherInterface;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 #[ApiResource(
-    itemOperations: ['get'],
-    collectionOperations: ['any'],
-    normalizationContext: ['groups' => ['read']]
+    collectionOperations: [
+        'put' => [
+            "security" => "is_granted('IS_AUTHENTICATED_FULLY') and object == user",
+            'normalization_context' => ['groups' => ['put_value']]
+        ],
+        'post' => ['normalization_context' => ['groups' => ['after_post']]],
+        'get'
+    ],
+    itemOperations: [
+        'get' => [
+            "security" => "is_granted('IS_AUTHENTICATED_FULLY')",
+            'normalization_context' => ['groups' => ['get']]
+        ],
+        'put' => [
+            "security" => "is_granted('IS_AUTHENTICATED_FULLY') and object == user",
+            'normalization_context' => ['groups' => ['after_put']],
+            'denormalization_context' => ['groups' => ['put_value']],
+        ]
+    ],
+    normalizationContext: ['groups' => ['get_user']]
 )]
 #[UniqueEntity(fields: 'email', message: "Email already exist")]
 #[UniqueEntity(fields: 'username', message: "Username already exist")]
@@ -28,17 +43,19 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column(type: 'integer')]
-    private $id;
+    #[Groups(["get_comments_with_author"])]
+    private ?int $id;
 
     #[ORM\Column(type: 'string', length: 255)]
-    #[Groups(['read'])]
     #[Assert\NotBlank]
     #[Assert\Length(
         min: 5,
         max: 255)]
-    private $username;
+    #[Groups(["get_comments_with_author", "get_user_of_blog_post"])]
+    private string $username;
 
     #[ORM\Column(type: 'string', length: 255)]
+    #[Groups(["put_value"])]
     #[Assert\NotBlank]
     #[Assert\Length(
         min: 5,
@@ -46,37 +63,37 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[Assert\Regex(
         '/(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9]).{7,}/',
         message: "Incorrect password. The correct password should has at least 7 characters, at least one upper letter, at least one number")]
-    private $password;
+    private string $password;
 
     #[Assert\Expression(
         "this.getPassword() === this.getRetypedPassword()",
         message: "Given password are not the same. Please try again"
     )]
     #[Assert\NotBlank]
-    private $retypedPassword;
+    #[Groups(["put_value"])]
+    private string $retypedPassword;
 
     #[ORM\Column(type: 'string', length: 255)]
-    #[Groups(['read'])]
     #[Assert\NotBlank]
     #[Assert\Length(
         min: 5,
         max: 255,
         minMessage: "Full name is to short should have at least 5 characters",
         maxMessage: "Full name is too long, should have at most 255 characters")]
-    private $fullname;
+    #[Groups(["after_put", "get_specific_comment"])]
+    private string $fullname;
 
     #[ORM\Column(type: 'string', length: 255)]
-    #[Groups(['read'])]
     #[Assert\NotBlank]
     #[Assert\Length(
         min: 5,
         max: 255,
         minMessage: "Name is to short should have at least 5 characters",
         maxMessage: "Name is too long, should have at most 255 characters")]
-    private $name;
+    #[Groups(["get_user", "after_put", "after_post"])]
+    private string $name;
 
     #[ORM\Column(type: 'string', length: 255)]
-    #[Groups(['read'])]
     #[Assert\NotBlank]
     #[Assert\Length(
         min: 5,
@@ -84,15 +101,16 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         minMessage: "Email is to short should have at least 5 characters",
         maxMessage: "Email is too long, should have at most 255 characters")]
     #[Assert\Email(message: "Email has incorrect format")]
-    private $email;
+    #[Groups(["get_user", "get_user_of_blog_post"])]
+    private string $email;
 
     #[ORM\OneToMany(targetEntity: BlogPost::class, mappedBy: 'author')]
-    #[Groups(['read'])]
-    private $posts;
+    #[Groups(["put"])]
+    private Collection $posts;
 
     #[ORM\OneToMany(targetEntity: Comment::class, mappedBy: 'author')]
-    #[Groups(['read'])]
-    private $comments;
+    #[Groups(["get_user"])]
+    private Collection $comments;
 
     public function __construct()
     {
@@ -165,36 +183,22 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
-    /**
-     * @return Collection
-     */
     public function getPosts(): Collection
     {
         return $this->posts;
     }
 
-    /**
-     * @param BlogPost $posts
-     * @return User
-     */
     public function setPosts(BlogPost $post): User
     {
         $this->posts->add($post);
         return $this;
     }
 
-    /**
-     * @return Collection
-     */
     public function getComments(): Collection
     {
         return $this->comments;
     }
 
-    /**
-     * @param Comment $comment
-     * @return User
-     */
     public function setComments(Comment $comment): User
     {
         $this->comments->add($comment);
