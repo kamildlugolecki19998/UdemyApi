@@ -20,5 +20,20 @@ services:
             - '../src/Entity/'
             - '../src/Kernel.php'
 
+    'App\Serializer\UserContextBuilder':
+        decorates: 'api_platform.serializer.context_builder'
+        arguments: [ '@App\Serializer\UserContextBuilder.inner' ]
+
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
+
+
+    'App\Serializer\UserAttributeNormalizer':
+        arguments: [ '@security.token_storage' ]
+        tags:
+            - { name: 'serializer.normalizer', priority: 64 }
+
+#    'App\Serializer\BlogPostAttributeNormalizer':
+#        arguments: [ '@security.token_storage' ]
+#        tags:
+#            - { name: 'serializer.normalizer', priority: 64 }

@@ -35,7 +35,7 @@ class Comment implements AuthoredEntityInterface, PublishedDateEntityInterface
     private ?int $id;
 
     #[ORM\Column(type: 'text')]
-    #[Groups(["post", "get_comments_with_author", "get_specific_comment", "get_all_comments", "get_user"])]
+    #[Groups(["post", "get_comments_with_author", "get_specific_comment", "get_all_comments", "get_user", "blog_owner"])]
     private ?string $content;
 
     #[ORM\Column(type: 'datetime')]
