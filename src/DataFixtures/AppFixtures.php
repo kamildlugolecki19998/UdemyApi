@@ -2,6 +2,7 @@
 
 namespace App\DataFixtures;
 
+use App\Consts\UserRolesConst;
 use App\Entity\BlogPost;
 use App\Entity\Comment;
 use App\Entity\User;
@@ -21,22 +22,49 @@ class AppFixtures extends Fixture
             'username' => 'admin',
             'email' => 'admin@blog.com',
             'name' => 'Kamil Długołęcki',
-            'password'=> 'Haslo1234',
-            'fullName' => 'Kamil Dluglecki Admin'
+            'password' => 'Haslo1234',
+            'fullName' => 'Kamil Dluglecki Admin',
+            'roles' => [UserRolesConst::ROLE_SUPER_ADMIN]
         ],
         [
             'username' => 'Josh',
             'email' => 'Josh@blog.com',
             'name' => 'Josh Newt',
-            'password'=> 'Haslo1234',
-            'fullName' => 'Josh Newt '
+            'password' => 'Haslo1234',
+            'fullName' => 'Josh Newt',
+            'roles' => [UserRolesConst::ROLE_ADMIN]
         ],
         [
             'username' => 'john',
-            'email' => 'john@blog.com',
-            'name' => 'John Doe',
-            'password'=> 'Haslo1234',
-            'fullName' => 'John Doe'
+            'email' => 'john@rowlling.com',
+            'name' => 'John Rowlling',
+            'password' => 'Haslo1234',
+            'fullName' => 'John Rowlling',
+            'roles' => [UserRolesConst::ROLE_WRITER]
+        ],
+        [
+            'username' => 'joseph',
+            'email' => 'joseph@joshua.com',
+            'name' => 'Joseph Joshua',
+            'password' => 'Haslo1234',
+            'fullName' => 'Joseph Joshua',
+            'roles' => [UserRolesConst::ROLE_WRITER]
+        ],
+        [
+            'username' => 'han_solo',
+            'email' => 'hab@solo.com',
+            'name' => 'Han',
+            'password' => 'Haslo1234',
+            'fullName' => 'Han Solo',
+            'roles' => [UserRolesConst::ROLE_EDITOR]
+        ],
+        [
+            'username' => 'jedi_knight',
+            'email' => 'jedi@knight.com',
+            'name' => 'Jedi',
+            'password' => 'Haslo1234',
+            'fullName' => 'Jedi knight',
+            'roles' => [UserRolesConst::ROLE_COMMENTATOR]
         ],
     ];
 
@@ -61,7 +89,7 @@ class AppFixtures extends Fixture
             $blogPost->setTitle($this->faker->realText(50));
             $blogPost->setPublished(new \DateTime());
             $blogPost->setContent($this->faker->realText(100));
-            $blogPost->setAuthor($this->getReference($this->getUserRandomUserReference()));
+            $blogPost->setAuthor($this->getReference($this->getUserRandomUserReference($blogPost)));
             $blogPost->setSlug($this->faker->slug);
 
             $this->setReference("blog_post_$i", $blogPost);
@@ -80,7 +108,7 @@ class AppFixtures extends Fixture
                 $comment->setContent($this->faker->realText(30));
                 $comment->setPublished(new \DateTime());
 
-                $comment->setAuthor($this->getReference($this->getUserRandomUserReference()));
+                $comment->setAuthor($this->getReference($this->getUserRandomUserReference($comment)));
                 $comment->setBlogPost($this->getReference("blog_post_$i"));
 
                 $manager->persist($comment);
@@ -92,7 +120,7 @@ class AppFixtures extends Fixture
 
     private function loadUsers(ObjectManager $manager)
     {
-        foreach (self::USERS as $userFixture){
+        foreach (self::USERS as $userFixture) {
             $user = new User();
 
             $user->setUsername($userFixture['username']);
@@ -105,6 +133,8 @@ class AppFixtures extends Fixture
             );
             $user->setPassword($hashedPassword);
 
+            $user->setRoles($userFixture['roles']);
+
             $this->addReference('user_' . $userFixture['username'], $user);
 
             $manager->persist($user);
@@ -113,8 +143,29 @@ class AppFixtures extends Fixture
         $manager->flush();
     }
 
-    private function getUserRandomUserReference(): string
+    private function getUserRandomUserReference($entity): string
     {
-        return 'user_' . self::USERS[rand(0, 2)]['username'];
+        $randomUser = self::USERS[rand(0, 5)];
+
+        if ($entity instanceof BlogPost &&
+            !count(array_intersect($randomUser['roles'],
+                [UserRolesConst::ROLE_SUPER_ADMIN,
+                UserRolesConst::ROLE_SUPER_ADMIN,
+                UserRolesConst::ROLE_WRITER]
+            ))) {
+            $this->getUserRandomUserReference($entity);
+        }
+
+        if ($entity instanceof Comment &&
+            !count(array_intersect($randomUser['roles'],
+                [UserRolesConst::ROLE_SUPER_ADMIN,
+                UserRolesConst::ROLE_SUPER_ADMIN,
+                UserRolesConst::ROLE_WRITER,
+                UserRolesConst::ROLE_COMMENTATOR]
+            ))) {
+            $this->getUserRandomUserReference($entity);
+        }
+
+        return 'user_' . self::USERS[rand(0, 5)]['username'];
     }
 }

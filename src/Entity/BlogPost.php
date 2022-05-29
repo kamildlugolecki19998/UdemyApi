@@ -16,14 +16,14 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ApiResource(
     collectionOperations: [
         'get' => ["security" => "is_granted('IS_AUTHENTICATED_FULLY')"],
-        'post' => ["security" => "is_granted('IS_AUTHENTICATED_FULLY')"],
+        'post' => ["security" => "is_granted('ROLE_WRITER')"],
     ],
     itemOperations: [
         'get' => [
             "security" => "is_granted('IS_AUTHENTICATED_FULLY')",
             'normalization_context' => ['groups' => ['get_user_of_blog_post']]
         ],
-        'put' => ["security" => "is_granted('IS_AUTHENTICATED_FULLY') and object.getAuthor() == user"]
+        'put' => ["security" => "is_granted('ROLE_EDITOR') or (is_granted('ROLE_WRITER') and object.getAuthor() == user)"]
     ],
     denormalizationContext: ['groups' => ['post']],
 )]
@@ -72,7 +72,7 @@ class BlogPost implements AuthoredEntityInterface, PublishedDateEntityInterface
     private User $author;
 
     #[ORM\OneToMany(targetEntity: Comment::class, mappedBy: 'blogPost')]
-    #[Groups(["get_user_of_blog_post"])]
+    #[Groups(["blog_owner"])]
     #[ApiSubresource()]
     private Collection $comments;
 
