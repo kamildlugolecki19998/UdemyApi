@@ -15,11 +15,11 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 class UserController extends AbstractController
 {
-    #[Route(
-        '/api/users',
-        name: 'register_user',
-        methods: ['POST']
-    )]
+//    #[Route(
+//        '/api/users',
+//        name: 'register_user',
+//        methods: ['POST']
+//    )]
     public function registerUser(
         UserPasswordHasherInterface $passwordHasher,
         Request                     $request,

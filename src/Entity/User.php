@@ -3,7 +3,9 @@
 namespace App\Entity;
 
 use ApiPlatform\Core\Annotation\ApiResource;
+use App\Controller\ResetPasswordAction;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
+use Symfony\Component\Security\Core\Validator\Constraints\UserPassword;
 use Symfony\Component\Validator\Constraints as Assert;
 use App\Repository\UserRepository;
 use Doctrine\Common\Collections\ArrayCollection;
@@ -17,11 +19,10 @@ use App\Consts\UserRolesConst;
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 #[ApiResource(
     collectionOperations: [
-        'put' => [
-            "security" => "is_granted('IS_AUTHENTICATED_FULLY') and object == user",
-            'normalization_context' => ['groups' => ['put_value']]
+        'post' => [
+            'normalization_context' => ['groups' => ['after_post']],
+            'denormalization_context' => ['groups' => ['register-user']]
         ],
-        'post' => ['normalization_context' => ['groups' => ['after_post']]],
         'get'
     ],
     itemOperations: [
@@ -29,10 +30,12 @@ use App\Consts\UserRolesConst;
             "security" => "is_granted('IS_AUTHENTICATED_FULLY')",
             'normalization_context' => ['groups' => ['get_specific_user_data']]
         ],
-        'put' => [
-            "security" => "is_granted('IS_AUTHENTICATED_FULLY') and object == user",
-            'normalization_context' => ['groups' => ['after_put']],
-            'denormalization_context' => ['groups' => ['put_value']],
+        'reset_password' => [
+            'method' => 'PUT',
+            'path' => 'user/{id}/reset_password',
+            'controller' => ResetPasswordAction::class,
+            'security' => "is_granted('IS_AUTHENTICATED_FULLY') and object == user",
+            'denormalization_context' => ['groups' => ['reset-password']],
         ]
     ],
     normalizationContext: ['groups' => ['get_user']]
@@ -48,65 +51,78 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private ?int $id;
 
     #[ORM\Column(type: 'string', length: 255)]
-    #[Assert\NotBlank]
+    #[Assert\NotBlank(groups: ['register-user'])]
     #[Assert\Length(
         min: 5,
-        max: 255)]
-    #[Groups(["get_comments_with_author", "get_user_of_blog_post", "get_specific_user_data"])]
+        max: 255,
+        groups: ['register-user']
+    )]
+    #[Groups(["get_comments_with_author", "get_user_of_blog_post", "get_specific_user_data", 'register-user'])]
     private string $username;
 
     #[ORM\Column(type: 'string', length: 255)]
-    #[Groups(["put_value"])]
-    #[Assert\NotBlank]
+    #[Groups(['register-user'])]
+    #[Assert\NotBlank(groups: ['register-user'])]
     #[Assert\Length(
         min: 5,
-        max: 255)]
+        max: 255,
+        groups: ['register-user']
+    )]
     #[Assert\Regex(
         '/(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9]).{7,}/',
-        message: "Incorrect password. The correct password should has at least 7 characters, at least one upper letter, at least one number")]
+        message: "Incorrect password. The correct password should has at least 7 characters, at least one upper letter, at least one number",
+        groups: ['register-user']
+    )]
     private string $password;
 
+    #[Assert\NotBlank(groups: ['register-user'])]
     #[Assert\Expression(
         "this.getPassword() === this.getRetypedPassword()",
-        message: "Given password are not the same. Please try again"
+        message: "Given password are not the same. Please try again",
+        groups: ['register-user']
     )]
-    #[Assert\NotBlank]
-    #[Groups(["put_value"])]
+    #[Groups(['register-user'])]
     private string $retypedPassword;
 
     #[ORM\Column(type: 'string', length: 255)]
-    #[Assert\NotBlank]
+    #[Assert\NotBlank(groups: ['register-user'])]
     #[Assert\Length(
         min: 5,
         max: 255,
         minMessage: "Full name is to short should have at least 5 characters",
-        maxMessage: "Full name is too long, should have at most 255 characters")]
-    #[Groups(["after_put", "get_specific_comment", "get_specific_user_data"])]
+        maxMessage: "Full name is too long, should have at most 255 characters",
+        groups: ['register-user']
+    )]
+    #[Groups(["after_put", "get_specific_comment", "get_specific_user_data", 'register-user'])]
     private string $fullname;
 
     #[ORM\Column(type: 'string', length: 255)]
-    #[Assert\NotBlank]
+    #[Assert\NotBlank(groups: ['register-user'])]
     #[Assert\Length(
         min: 5,
         max: 255,
         minMessage: "Name is to short should have at least 5 characters",
-        maxMessage: "Name is too long, should have at most 255 characters")]
-    #[Groups(["get_user", "after_put", "after_post"])]
+        maxMessage: "Name is too long, should have at most 255 characters",
+        groups: ['register-user']
+    )]
+    #[Groups(["get_user", "after_put", "after_post", 'register-user'])]
     private string $name;
 
     #[ORM\Column(type: 'string', length: 255)]
-    #[Assert\NotBlank]
+    #[Assert\NotBlank(groups: ['register-user'])]
     #[Assert\Length(
         min: 5,
         max: 255,
         minMessage: "Email is to short should have at least 5 characters",
-        maxMessage: "Email is too long, should have at most 255 characters")]
-    #[Assert\Email(message: "Email has incorrect format")]
-    #[Groups(["get_user", "get_user_of_blog_post", "get-admin", "get-owner"])]
+        maxMessage: "Email is too long, should have at most 255 characters",
+        groups: ['register-user']
+    )]
+    #[Assert\Email(message: "Email has incorrect format", groups: ['register-user'])]
+    #[Groups(["get_user", "get_user_of_blog_post", "get-admin", "get-owner", 'register-user'])]
     private string $email;
 
     #[ORM\OneToMany(targetEntity: BlogPost::class, mappedBy: 'author')]
-    #[Groups(["put", "get_specific_user_data"])]
+    #[Groups(["get_specific_user_data"])]
     private Collection $posts;
 
     #[ORM\OneToMany(targetEntity: Comment::class, mappedBy: 'author')]
@@ -116,6 +132,27 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(type: 'array')]
     #[Groups(["get-admin", "get-owner"])]
     private array $roles;
+
+    #[Groups(['reset-password'])]
+    #[Assert\NotBlank(groups: ['reset-password'])]
+    #[UserPassword(groups: ['reset-password'])]
+    private string $oldPassword;
+
+    #[Groups(["reset-password"])]
+    #[Assert\NotBlank(groups: ['reset-password'])]
+    #[Assert\Regex(
+        '/(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9]).{7,}/',
+        message: "Incorrect password. The correct password should has at least 7 characters, at least one upper letter, at least one number")]
+    private string $newPassword;
+
+    #[Groups(['reset-password'])]
+    #[Assert\NotBlank(groups: ['reset-password'])]
+    #[Assert\Expression(
+        "this.getPassword() === this.getRetypedPassword()",
+        message: "Given password are not the same. Please try again",
+        groups: ['reset-password']
+    )]
+    private string $newRetypedPassword;
 
     public function __construct()
     {
@@ -241,6 +278,60 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setRetypedPassword(string $retypedPassword): User
     {
         $this->retypedPassword = $retypedPassword;
+        return $this;
+    }
+
+    /**
+     * @return string
+     */
+    public function getOldPassword(): string
+    {
+        return $this->oldPassword;
+    }
+
+    /**
+     * @param string $oldPassword
+     * @return User
+     */
+    public function setOldPassword(string $oldPassword): User
+    {
+        $this->oldPassword = $oldPassword;
+        return $this;
+    }
+
+    /**
+     * @return string
+     */
+    public function getNewPassword(): string
+    {
+        return $this->newPassword;
+    }
+
+    /**
+     * @param string $newPassword
+     * @return User
+     */
+    public function setNewPassword(string $newPassword): User
+    {
+        $this->newPassword = $newPassword;
+        return $this;
+    }
+
+    /**
+     * @return string
+     */
+    public function getNewRetypedPassword(): string
+    {
+        return $this->newRetypedPassword;
+    }
+
+    /**
+     * @param string $newRetypedPassword
+     * @return User
+     */
+    public function setNewRetypedPassword(string $newRetypedPassword): User
+    {
+        $this->newRetypedPassword = $newRetypedPassword;
         return $this;
     }
 }

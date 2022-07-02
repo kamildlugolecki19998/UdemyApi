@@ -5,6 +5,7 @@ namespace App\EventSubscriber;
 use ApiPlatform\Core\EventListener\EventPriorities;
 use App\Entity\BlogPost;
 use App\Entity\User;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Event\ViewEvent;
@@ -38,8 +39,8 @@ class UserSubscriber implements EventSubscriberInterface
         $entity = $event->getControllerResult();
 //        var_dump($method);
 //        var_dump(!$entity instanceof User || !in_array($method, [Request::METHOD_POST, Request::METHOD_PUT]));
-//        exit();
-        if(!$entity instanceof User || !in_array($method, [Request::METHOD_POST, Request::METHOD_PUT])) {
+
+        if(!$entity instanceof User && !in_array($method, [Request::METHOD_POST])) {
             return;
         }
 
